@@ -1,0 +1,377 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Heart, 
+  Flame, 
+  Leaf, 
+  Award, 
+  Plus, 
+  ChevronRight, 
+  Smile, 
+  Info,
+  Droplet,
+  Zap
+} from 'lucide-react';
+
+// --- DATA & CONTENT ---
+const TACO_BELL_HACKS = [
+  { title: "Fresco Style", desc: "Swap mayo-based sauces and cheese for fresh diced tomatoes. Cuts heavy fats and adds freshness!", icon: <Droplet className="w-5 h-5 text-blue-400" /> },
+  { title: "Power Up with Beans", desc: "Taco Bell's refried and black beans are incredible sources of fiber, which keeps you full and happy.", icon: <Leaf className="w-5 h-5 text-green-400" /> },
+  { title: "Cantina Chicken", desc: "The Cantina chicken is slow-roasted and packed with lean protein. Great for muscle recovery and steady energy!", icon: <Zap className="w-5 h-5 text-yellow-400" /> },
+  { title: "Sauce is Life", desc: "Hot sauces (Mild to Diablo) have essentially zero calories. Flavor up without the guilt!", icon: <Flame className="w-5 h-5 text-orange-500" /> }
+];
+
+const MENU_ITEMS = [
+  { id: 'crunchwrap', name: 'Crunchwrap Supreme', baseProtein: 16, baseFiber: 6, emoji: '🌯' },
+  { id: 'bean_burrito', name: 'Bean Burrito', baseProtein: 13, baseFiber: 11, emoji: '🌯' },
+  { id: 'cantina_bowl', name: 'Cantina Chicken Bowl', baseProtein: 25, baseFiber: 11, emoji: '🥗' },
+  { id: 'doritos_taco', name: 'Doritos Locos Taco', baseProtein: 8, baseFiber: 3, emoji: '🌮' },
+  { id: 'cheese_quesadilla', name: 'Cheese Quesadilla', baseProtein: 26, baseFiber: 4, emoji: '🧀' }
+];
+
+const MODIFIERS = [
+  { id: 'fresco', name: 'Make it Fresco (Fresh Pico)', bonusJoy: 15, tag: 'Fresh!' },
+  { id: 'sub_beans', name: 'Sub Meat for Black Beans', bonusJoy: 20, tag: 'Fiber Boost!' },
+  { id: 'add_chicken', name: 'Add Extra Chicken', bonusJoy: 15, tag: 'Protein+' },
+  { id: 'treat_yoself', name: 'Got exactly what I craved', bonusJoy: 25, tag: 'Mental Health Win!' }
+];
+
+// --- MAIN COMPONENT ---
+export default function App() {
+  const [view, setView] = useState('dashboard'); // dashboard, log, hacks
+  const [logs, setLogs] = useState([]);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // Stats derived from logs
+  const totalJoy = logs.reduce((acc, log) => acc + log.joyPoints, 0);
+  const totalProtein = logs.reduce((acc, log) => acc + log.protein, 0);
+  const totalFiber = logs.reduce((acc, log) => acc + log.fiber, 0);
+  
+  // Gamification Levels
+  const level = Math.floor(totalJoy / 100) + 1;
+  const levelNames = ["Mild Sauce Novice", "Hot Sauce Hustler", "Fire Sauce Phenom", "Diablo Master", "Crunchwrap Queen"];
+  const currentTitle = levelNames[Math.min(level - 1, levelNames.length - 1)];
+
+  const handleLogSubmit = (logData) => {
+    setLogs([logData, ...logs]);
+    setView('dashboard');
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden">
+      {/* Confetti overlay simulation */}
+      {showConfetti && (
+        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center bg-purple-900/50">
+          <div className="text-center animate-bounce">
+            <div className="text-6xl mb-4">🎉🌮🎉</div>
+            <h2 className="text-2xl font-bold text-yellow-400">Treat Enjoyed!</h2>
+            <p className="text-white">Zero guilt. 100% Joy.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="bg-purple-900 p-6 rounded-b-3xl shadow-lg border-b-4 border-yellow-400">
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-2xl font-black text-white tracking-wider flex items-center gap-2">
+            <Heart className="text-pink-400 fill-pink-400" /> 
+            TACO JOY TREKKER
+          </h1>
+        </div>
+        <p className="text-purple-200 text-sm font-medium">Fueling your body & comforting your soul.</p>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="p-4 pb-24">
+        {view === 'dashboard' && (
+          <Dashboard 
+            totalJoy={totalJoy} 
+            level={level} 
+            currentTitle={currentTitle}
+            totalProtein={totalProtein}
+            totalFiber={totalFiber}
+            logs={logs}
+            setView={setView}
+          />
+        )}
+        {view === 'log' && <LogRun onSubmit={handleLogSubmit} onCancel={() => setView('dashboard')} />}
+        {view === 'hacks' && <Hacks onBack={() => setView('dashboard')} />}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 w-full max-w-md bg-slate-800 border-t border-slate-700 flex justify-around p-3 pb-safe">
+        <NavButton icon={<Award />} label="Stats" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+        <button 
+          onClick={() => setView('log')}
+          className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-full -mt-8 shadow-lg shadow-purple-500/30 text-white hover:scale-105 transition-transform"
+        >
+          <Plus size={28} />
+        </button>
+        <NavButton icon={<Info />} label="Hacks" active={view === 'hacks'} onClick={() => setView('hacks')} />
+      </nav>
+    </div>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+
+function Dashboard({ totalJoy, level, currentTitle, totalProtein, totalFiber, logs, setView }) {
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Level Card */}
+      <div className="bg-gradient-to-br from-purple-800 to-indigo-900 rounded-2xl p-6 shadow-lg border border-purple-700 relative overflow-hidden">
+        <div className="absolute -right-4 -top-4 opacity-10">
+          <Flame size={120} />
+        </div>
+        <div className="relative z-10">
+          <p className="text-purple-300 text-sm font-bold uppercase tracking-widest mb-1">Current Status</p>
+          <h2 className="text-3xl font-black text-yellow-400 mb-2">{currentTitle}</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="bg-purple-950 px-3 py-1 rounded-full text-sm font-medium border border-purple-600 flex items-center gap-1">
+              <Smile size={16} className="text-pink-400" /> Level {level}
+            </span>
+            <span className="bg-purple-950 px-3 py-1 rounded-full text-sm font-medium border border-purple-600 flex items-center gap-1">
+              <Zap size={16} className="text-yellow-400" /> {totalJoy} Joy Pts
+            </span>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-purple-950 rounded-full h-3 mb-1 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-pink-500 to-yellow-400 h-3 rounded-full transition-all duration-1000"
+              style={{ width: `${(totalJoy % 100)}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-purple-300 text-right">{100 - (totalJoy % 100)} pts to next rank!</p>
+        </div>
+      </div>
+
+      {/* Positive Macros */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 bg-blue-500/20 rounded-lg"><Zap className="text-blue-400 w-5 h-5" /></div>
+            <h3 className="font-bold text-slate-300 text-sm">Protein Powered</h3>
+          </div>
+          <p className="text-2xl font-black text-white">{totalProtein}g</p>
+          <p className="text-xs text-slate-400 mt-1">Muscle building fuel</p>
+        </div>
+        <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 bg-green-500/20 rounded-lg"><Leaf className="text-green-400 w-5 h-5" /></div>
+            <h3 className="font-bold text-slate-300 text-sm">Fiber Focused</h3>
+          </div>
+          <p className="text-2xl font-black text-white">{totalFiber}g</p>
+          <p className="text-xs text-slate-400 mt-1">Happy digestion</p>
+        </div>
+      </div>
+
+      {/* Empty State or Recent Logs */}
+      <div>
+        <h3 className="text-lg font-bold mb-3 text-slate-200">Recent Treks</h3>
+        {logs.length === 0 ? (
+          <div className="bg-slate-800 rounded-2xl p-8 text-center border border-slate-700 border-dashed">
+            <div className="text-4xl mb-3">🌮</div>
+            <p className="text-slate-400 font-medium">No trips yet! Go grab some comfort food and log it here.</p>
+            <button 
+              onClick={() => setView('log')}
+              className="mt-4 px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full font-bold transition-colors"
+            >
+              Log First Trip
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {logs.map((log, i) => (
+              <div key={i} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl bg-slate-900 p-2 rounded-xl">{log.emoji}</span>
+                  <div>
+                    <p className="font-bold text-slate-100">{log.itemName}</p>
+                    <p className="text-xs text-purple-400 font-medium">+{log.joyPoints} Joy Points</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400">{log.date}</p>
+                  {log.modifiers.length > 0 && (
+                    <div className="flex gap-1 mt-1 justify-end">
+                      {log.modifiers.map((m, idx) => (
+                        <span key={idx} className="w-2 h-2 rounded-full bg-pink-500" title={m}></span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LogRun({ onSubmit, onCancel }) {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedMods, setSelectedMods] = useState([]);
+
+  const toggleMod = (modId) => {
+    setSelectedMods(prev => 
+      prev.includes(modId) ? prev.filter(id => id !== modId) : [...prev, modId]
+    );
+  };
+
+  const handleSave = () => {
+    if (!selectedItem) return;
+    
+    const item = MENU_ITEMS.find(i => i.id === selectedItem);
+    const mods = MODIFIERS.filter(m => selectedMods.includes(m.id));
+    
+    // Calculate stats
+    let joy = 50; // Base joy for treating yourself
+    joy += mods.reduce((sum, m) => sum + m.bonusJoy, 0);
+    
+    let protein = item.baseProtein;
+    if (selectedMods.includes('add_chicken')) protein += 10;
+    
+    let fiber = item.baseFiber;
+    if (selectedMods.includes('sub_beans')) fiber += 8;
+
+    onSubmit({
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      itemName: item.name,
+      emoji: item.emoji,
+      modifiers: mods.map(m => m.name),
+      joyPoints: joy,
+      protein,
+      fiber
+    });
+  };
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div>
+        <h2 className="text-2xl font-black text-white mb-1">Log a Run</h2>
+        <p className="text-slate-400 text-sm">What comfort food did you grab today?</p>
+      </div>
+
+      {/* Item Selection */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">1. Main Item</h3>
+        <div className="grid grid-cols-1 gap-2">
+          {MENU_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setSelectedItem(item.id)}
+              className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
+                selectedItem === item.id 
+                  ? 'bg-purple-900/50 border-purple-400 shadow-inner' 
+                  : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              <span className="text-2xl">{item.emoji}</span>
+              <span className="font-medium text-slate-100 flex-1">{item.name}</span>
+              {selectedItem === item.id && <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Positive Modifiers */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">2. Joy & Health Hacks</h3>
+        <p className="text-xs text-slate-400 mb-2">Check any positive choices you made (including just letting yourself enjoy it!)</p>
+        <div className="grid gap-2">
+          {MODIFIERS.map(mod => (
+            <button
+              key={mod.id}
+              onClick={() => toggleMod(mod.id)}
+              className={`flex flex-col p-3 rounded-xl border text-left transition-all ${
+                selectedMods.includes(mod.id)
+                  ? 'bg-pink-900/30 border-pink-500' 
+                  : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
+              }`}
+            >
+              <div className="flex justify-between items-center w-full">
+                <span className="font-medium text-slate-200">{mod.name}</span>
+                <span className="text-xs font-bold bg-slate-900 text-pink-400 px-2 py-1 rounded-md">
+                  +{mod.bonusJoy} Joy
+                </span>
+              </div>
+              <span className="text-xs text-slate-400 mt-1">{mod.tag}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-4">
+        <button 
+          onClick={onCancel}
+          className="flex-1 py-4 rounded-xl font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
+        >
+          Cancel
+        </button>
+        <button 
+          onClick={handleSave}
+          disabled={!selectedItem}
+          className={`flex-1 py-4 rounded-xl font-bold text-white transition-all shadow-lg ${
+            selectedItem 
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 shadow-purple-500/25' 
+              : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+          }`}
+        >
+          Save Log
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Hacks() {
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
+      <div>
+        <h2 className="text-2xl font-black text-white mb-1">Taco Bell Education</h2>
+        <p className="text-slate-400 text-sm">Learn how to make comfort food work for you.</p>
+      </div>
+
+      <div className="bg-blue-900/30 border border-blue-800 rounded-2xl p-4 flex items-start gap-3">
+        <Info className="text-blue-400 shrink-0 mt-1" />
+        <div>
+          <h3 className="font-bold text-blue-100 mb-1">Did you know?</h3>
+          <p className="text-sm text-blue-200/80 leading-relaxed">
+            Taco Bell was the first QSR (Quick Service Restaurant) to offer American Vegetarian Association (AVA) certified food. It's actually one of the easiest places to hit your macro goals!
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {TACO_BELL_HACKS.map((hack, i) => (
+          <div key={i} className="bg-slate-800 p-5 rounded-2xl border border-slate-700">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-slate-900 rounded-lg">{hack.icon}</div>
+              <h3 className="font-bold text-slate-100">{hack.title}</h3>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed pl-12">{hack.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NavButton({ icon, label, active, onClick }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${
+        active ? 'text-yellow-400' : 'text-slate-500 hover:text-slate-300'
+      }`}
+    >
+      {React.cloneElement(icon, { size: 24, className: active ? 'drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : '' })}
+      <span className="text-[10px] font-bold tracking-wider">{label}</span>
+    </button>
+  );
+}
+
